@@ -1,7 +1,8 @@
+// @Import
 const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
-
+const cors = require('cors');
 const usersRoutes = require('./routes/users-route');
 const productsRoutes = require('./routes/products-route');
 
@@ -9,6 +10,7 @@ const HttpError = require('./models/http-error')
 
 const app = express();
 
+// @Connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://Quan:0794266798@cluster0.0ci90.mongodb.net/products?retryWrites=true&w=majority', {
         useCreateIndex: true,
         useNewUrlParser: true,
@@ -20,6 +22,18 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://Quan:0794266798@clust
 
 app.use(bodyParser.json());
 
+// @Middleware
+app.use(cors());
+app.use(function(req, res, next) {
+    res.header("Access-Control-Allow-Origin", '*');
+    res.header("Access-Control-Allow-Origin", '*');
+    res.header("Access-Control-Allow-Credentials", true);
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+    res.header("Access-Control-Allow-Headers", 'Origin,X-Requested-With,Content-Type,Accept,content-type,application/json');
+    next();
+});
+
+// @Router
 app.use('/api/products', productsRoutes);
 app.use('/api/users', usersRoutes);
 
