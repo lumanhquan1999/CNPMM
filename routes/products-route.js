@@ -10,9 +10,9 @@ router.get('/:pid', productsControllers.getProductsByID);
 router.post('/', 
 [
     check('name').not().isEmpty(),
-    check('branch').not().isEmpty(),
-    check('OS').not().isEmpty(),
-    check('color').not().isEmpty(),
+    check('author').not().isEmpty(),
+    check('category').not().isEmpty(),
+    check('country').not().isEmpty(),
     check('price').not().isEmpty()
 ],
 productsControllers.createProduct
@@ -20,7 +20,7 @@ productsControllers.createProduct
 
 router.patch('/:pid', [
     check('name').not().isEmpty(),
-    check('color').not().isEmpty(),
+    check('category').not().isEmpty(),
     check('price').not().isEmpty()
 ],
 productsControllers.updateProduct

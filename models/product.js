@@ -4,12 +4,12 @@ const Schema = mongoose.Schema;
 
 
 const productSchema = new Schema({
-    name: { type: String, require: true },
-    branch: { type: String, require: true },
-    image: { type: String, require: true },
-    OS: { type: String, require: true },
-    color: { type: String, require: true },
-    price: { type: Number, require: true }
+    name: { type: String, required: true },
+    author: { type: String, required: true },
+    image: { type: String, required: true },
+    category: { type: String, required: true },
+    country: { type: String, required: true },
+    price: { type: Number, required: true }
 });
 
 module.exports = mongoose.model('Product', productSchema);
