@@ -1,11 +1,12 @@
 const Comment = require('../models/Comment')
 const Image_Pro = require('../models/Image_Pro')
-
+const Validator = require('../validators/validator')
 const cloudinary = require('cloudinary')
-
+const Mobile = require('../models/Mobile')
 const createError = require('http-errors')
 const Product = require('../models/Product')
-/* const slp = require('sleep') */
+const { query } = require('express')
+    /* const slp = require('sleep') */
 
 const uploadImageMobile = async(req, res, next) => {
     try {
@@ -77,8 +78,7 @@ const uploadImageMobile = async(req, res, next) => {
             imaged3.save()
             product.image.push(imaged3._id)
         })
-        await product.save()
-        console.log(product)
+        await product.save();
         return res.status(200).json({ message: 'success' })
 
     } catch (error) {
@@ -88,8 +88,141 @@ const uploadImageMobile = async(req, res, next) => {
 
 const getAllProduct = async(req, res, next) => {
     try {
-        const products = await Product.find({})
-        return res.status(200).json({ products: { success: 'true', products } })
+        //let regex = /^[a-zA-Z0-9& ]*$/;
+        let condition = {}
+        if (req.query.keyword != undefined && req.query.keyword != "") {
+            let keyword = req.query.keyword.replace(/[`~!@#$%^&*()_|+\-=?;:'",.<>\{\}\[\]\\\/]/gi, '');
+            condition.name = { $regex: '.*' + keyword.trim() + '.*', $options: 'i' };
+        }
+        if (req.query.brand != undefined && req.query.brand != "") {
+            if (Validator.isValidObjId(req.query.brand)) {
+                condition.brand = req.query.brand
+            }
+        }
+        if (req.query.category != undefined && req.query.category != "") {
+            if (Validator.isValidObjId(req.query.category)) {
+                condition.category = req.query.category
+            }
+        }
+        if (req.query.color != undefined && req.query.color != "") {
+            if (Validator.isValidObjId(req.query.color)) {
+                const mobile = await Mobile.find({ "color": req.query.color })
+
+                const listID = [];
+
+                mobile.forEach(async(element) => {
+                    listID.push(element._id);
+                });
+
+                condition["detail_info.mobile"] = listID;
+            }
+        }
+        //  condition["$options"] = { limit: 1 }
+        let limit = 5;
+        let page = 0;
+
+        if (req.query.limit != undefined && req.query.limit != "") {
+            const number_limit = parseInt(req.query.limit);
+            if (number_limit && number_limit > 0) {
+                limit = number_limit;
+            }
+        }
+        if (req.query.page != undefined && req.query.page != "") {
+            const number_page = parseInt(req.query.page);
+            if (number_page && number_page > 0) {
+                page = number_page;
+            }
+        }
+        let sort = {}
+        if (req.query.sort_n != undefined && req.query.sort_n != '0') {
+            sort['name'] = req.query.sort_n == '1' ? 1 : -1;
+        }
+
+        if (req.query.sort_p != undefined && req.query.sort_p != '0') {
+            sort['price'] = req.query.sort_p == '1' ? 1 : -1;
+        }
+
+        if (req.query.min_p != undefined || req.query.max_p != undefined) {
+            condition.price = { $lte: req.query.max_p || 10000000, $gte: req.query.min_p || 0 }
+        }
+        //  condition["$orderby"] = sort;
+        //  console.log(condition)
+        let products;
+        if (req.query.color != undefined && req.query.color != "") {
+            products = await Product.find(condition)
+                .populate({ path: 'bigimage', select: 'public_url' })
+                .populate({ path: 'image', select: 'public_url' })
+                .populate('detail_info.mobile')
+                .sort(sort)
+                .limit(limit)
+                .skip(limit * page);
+        } else {
+            products = await Product.find(condition)
+                .populate({ path: 'bigimage', select: 'public_url' })
+                .populate({ path: 'image', select: 'public_url' })
+                .sort(sort)
+                .limit(limit)
+                .skip(limit * page);
+        }
+        let count = await Product.countDocuments(condition);
+        return res.status(200).json({ success: true, code: 200, message: '', page: page, limit: limit, total: count, products: products })
+    } catch (error) {
+        return next(error)
+    }
+}
+const getAllProductByBrand = async(req, res, next) => {
+    try {
+        const { IDBrand } = req.params
+        if (!Validator.isValidObjId(IDBrand)) return res.status(200).json({ success: false, code: 400, message: 'check link again!' })
+        const products = await Product.find({ "brand": IDBrand })
+            .populate({ path: 'bigimage', select: 'public_url' })
+            .populate({ path: 'image', select: 'public_url' });;
+
+        return res.status(200).json({ success: true, code: 200, message: 'success', products })
+    } catch (error) {
+        return next(error)
+    }
+}
+
+const getAllProductByColor = async(req, res, next) => {
+    try {
+        const { IDColor } = req.params
+        if (!Validator.isValidObjId(IDColor)) return res.status(200).json({ success: false, code: 400, message: 'check link again!' })
+        const mobile = await Mobile.find({ "color": IDColor });
+
+        const listID = [];
+
+        mobile.forEach(async(element) => {
+            listID.push(element._id);
+        });
+        const products = await Product.find({ "detail_info.mobile": listID })
+            .populate({ path: 'bigimage', select: 'public_url' })
+            .populate({ path: 'image', select: 'public_url' });;;
+        return res.status(200).json({ success: true, code: 200, message: 'success', products })
+    } catch (error) {
+        return next(error)
+    }
+}
+
+const getAllProductByCategory = async(req, res, next) => {
+    try {
+        const { IDCategory } = req.params
+        if (!Validator.isValidObjId(IDCategory)) return res.status(200).json({ success: false, code: 400, message: 'check link again!' })
+        const products = await Product.find({ "category": IDCategory })
+            .populate({ path: 'bigimage', select: 'public_url' })
+            .populate({ path: 'image', select: 'public_url' });;
+
+        return res.status(200).json({ success: true, code: 200, message: 'success', products: products })
+    } catch (error) {
+        return next(error)
+    }
+}
+const searchProduct = async(req, res, next) => {
+    try {
+        const products = await Product.find()
+            .populate({ path: 'bigimage', select: 'public_url' })
+            .populate({ path: 'image', select: 'public_url' });
+        return res.status(200).json({ success: true, code: 200, message: '', products: products })
     } catch (error) {
         return next(error)
     }
@@ -97,5 +230,9 @@ const getAllProduct = async(req, res, next) => {
 
 module.exports = {
     uploadImageMobile,
-    getAllProduct
+    getAllProduct,
+    getAllProductByBrand,
+    getAllProductByCategory,
+    getAllProductByColor,
+    searchProduct
 }
